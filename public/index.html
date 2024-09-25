@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body class="h-[100vh]">
+    <div class="flex h-full bg-gray-500">
+      <div
+        class="w-1/3 border-r-2 bg-gray-300 p-2 flex flex-col gap-3 rounded-r-3xl"
+      >
+        <div class="h-1/2 bg-gray-500 p-5 rounded-3xl">
+          <h2 class="bg-gray-300 p-2 rounded-xl text-center">Users</h2>
+
+          <select
+            multiple
+            id="activeUsers"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:outline-none h-2/4 mt-5"
+          >
+            <option selected>--Active Users--</option>
+          </select>
+          <div class="flex gap-3 mt-5">
+            <input
+              type="text"
+              id="userId"
+              placeholder="User ID"
+              class="p-2 rounded-lg"
+            />
+            <button
+              onclick="register()"
+              class="p-2 rounded-lg bg-gray-100 w-full"
+            >
+              Login
+            </button>
+          </div>
+        </div>
+
+        <div class="h-1/2 bg-gray-500 p-5 rounded-3xl">
+          <h2 class="bg-gray-300 p-2 rounded-xl text-center">Group</h2>
+
+          <select
+            multiple
+            id="groups"
+            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:outline-none h-2/4 mt-2"
+          >
+            <option selected>--Groups--</option>
+          </select>
+          <div class="flex gap-3 mt-2">
+            <input
+              type="text"
+              id="groupName"
+              placeholder="New Group"
+              class="p-1 rounded-lg"
+            />
+            <button
+              onclick="createGroup()"
+              class="p-1 rounded-lg bg-gray-100 w-full"
+            >
+              Create
+            </button>
+          </div>
+          <button
+            onclick="joinGroup()"
+            class="p-2 rounded-lg bg-gray-100 w-full mt-2"
+          >
+            Join Group
+          </button>
+        </div>
+      </div>
+      <div class="w-full p-3">
+        <div
+          class="flex flex-col flex-grow h-5/6 p-4 overflow-auto"
+          id="messages"
+        >
+          <!-- msg -->
+        </div>
+        <div
+          class="w-full pl-3 pr-1 py-1 rounded-3xl border border-gray-200 items-center gap-2 inline-flex justify-between mt-9"
+        >
+          <div class="flex items-center gap-2 w-3/4">
+            <input
+              class="grow shrink basis-0 text-black text-xs font-medium leading-4 focus:outline-none bg-transparent"
+              placeholder="Type here..."
+              id="sendMessage"
+            />
+          </div>
+          <div class="flex items-center gap-2 w-1/4">
+            <button
+              class="items-center flex px-3 py-2 bg-indigo-600 rounded-full shadow w-full flex justify-center"
+              onclick="sendMessage()"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+              >
+                <g id="Send 01">
+                  <path
+                    id="icon"
+                    d="M9.04071 6.959L6.54227 9.45744M6.89902 10.0724L7.03391 10.3054C8.31034 12.5102 8.94855 13.6125 9.80584 13.5252C10.6631 13.4379 11.0659 12.2295 11.8715 9.81261L13.0272 6.34566C13.7631 4.13794 14.1311 3.03408 13.5484 2.45139C12.9657 1.8687 11.8618 2.23666 9.65409 2.97257L6.18714 4.12822C3.77029 4.93383 2.56187 5.33664 2.47454 6.19392C2.38721 7.0512 3.48957 7.68941 5.69431 8.96584L5.92731 9.10074C6.23326 9.27786 6.38623 9.36643 6.50978 9.48998C6.63333 9.61352 6.72189 9.7665 6.89902 10.0724Z"
+                    stroke="white"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </g>
+              </svg>
+              <h3 class="text-white text-xs font-semibold leading-4 px-2">
+                Send
+              </h3>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const socket = io();
+      const msgData = {
+        users: [],
+        groups: [],
+      };
+
+      let sellectChat;
+
+      // * find chat
+      document
+        .getElementById("activeUsers")
+        .addEventListener("focus", (event) => {
+          sellectChat = "users";
+        });
+      document.getElementById("groups").addEventListener("focus", (event) => {
+        sellectChat = "groups";
+      });
+      // * is click reset messages
+      document
+        .getElementById("activeUsers")
+        .addEventListener("click", (event) => {
+          const toUserId = document.getElementById("activeUsers").value;
+          const data = msgData.users[toUserId];
+          const messages = document.getElementById("messages");
+          messages.innerHTML = "";
+          messagesList({ data });
+        });
+      // * is click reset messages
+      document.getElementById("groups").addEventListener("click", (event) => {
+        const toGroupsId = document.getElementById("groups").value;
+        const data = msgData.groups[toGroupsId];
+        const messages = document.getElementById("messages");
+        messages.innerHTML = "";
+        messagesList({ data });
+      });
+
+      // * message list
+      const messagesList = ({ data }) => {
+        data?.forEach((element) => {
+          if (element[0] == "you") {
+            messages.innerHTML += `
+                <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
+                  <div>
+                    <span class="text-xs leading-none">You</span>
+                    <div
+                      class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg"
+                    >
+                      <p class="text-sm">
+                        ${element[1]}
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+                </div>
+              `;
+          } else {
+            messages.innerHTML += `
+                <div class="flex w-full mt-2 space-x-3 max-w-xs">
+                  <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+                  <div>
+                    <span class="text-xs leading-none">${element[0]}</span>
+                    <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                      <p class="text-sm">
+                        ${element[1]}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              `;
+          }
+        });
+      };
+
+      // * save user
+      const register = () => {
+        const userId = document.getElementById("userId").value;
+        socket.emit("register", userId);
+      };
+
+      // * create new group
+      const createGroup = () => {
+        const groupName = document.getElementById("groupName").value;
+        if (groupName) socket.emit("createGroup", groupName);
+      };
+
+      // * join group
+      const joinGroup = () => {
+        const groupName = document.getElementById("groups").value;
+        if (groupName) socket.emit("joinGroup", groupName);
+      };
+
+      // * private send message
+      const sendPrivateMessage = () => {
+        const toUserId = document.getElementById("activeUsers").value;
+        const message = document.getElementById("sendMessage").value;
+        if (toUserId && message) {
+          // * is users check
+          if (!msgData.users[toUserId]) msgData.users[toUserId] = [];
+          msgData.users[toUserId].push(["you", message]);
+          // * Write your own message on the screen
+          const messages = document.getElementById("messages");
+          // * message added to screen
+          messages.innerHTML += `
+              <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
+                <div>
+                  <span class="text-xs leading-none">You</span>
+                  <div
+                    class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg"
+                  >
+                    <p class="text-sm">
+                      ${message}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+              </div>
+              `;
+          // * Send message to server
+          socket.emit("privateMessage", { to: toUserId, message });
+          document.getElementById("sendMessage").value = ""; // * Clear message box
+        }
+      };
+
+      // * Send group message
+      const sendGroupMessage = () => {
+        const groupName = document.getElementById("groups").value;
+        const message = document.getElementById("sendMessage").value;
+        if (groupName && message) {
+          if (!msgData.groups[groupName]) msgData.groups[groupName] = [];
+          msgData.groups[groupName].push(["you", message]);
+          // * Write your own message on the screen
+          const messages = document.getElementById("messages");
+          // * message added to screen
+          messages.innerHTML += `
+              <div class="flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end">
+                <div>
+                  <span class="text-xs leading-none">You</span>
+                  <div
+                    class="bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg"
+                  >
+                    <p class="text-sm">
+                      ${message}
+                    </p>
+                  </div>
+                </div>
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+              </div>
+              `;
+          // * Send message to server
+          socket.emit("groupMessage", { groupName, message });
+          document.getElementById("sendMessage").value = ""; // * Clear message box
+        }
+      };
+
+      const sendMessage = (params) => {
+        switch (sellectChat) {
+          case "users":
+            sendPrivateMessage();
+            break;
+          case "groups":
+            sendGroupMessage();
+            break;
+
+          default:
+            console.log("Err: Chat not selected.");
+            break;
+        }
+      };
+
+      // * Show private message from another user
+      socket.on("privateMessage", ({ from, message }) => {
+        const toUserId = document.getElementById("activeUsers").value;
+        if (!msgData.users[from]) msgData.users[from] = [];
+        msgData.users[from].push([from, message]);
+        const messages = document.getElementById("messages");
+        if (toUserId == from && sellectChat == "users")
+          // * message added to screen
+          messages.innerHTML += `
+              <div class="flex w-full mt-2 space-x-3 max-w-xs">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+                <div>
+                  <span class="text-xs leading-none">${from}</span>
+                  <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                    <p class="text-sm">
+                      ${message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `;
+      });
+
+      // * Show group message from another user (excluding sender)
+      socket.on("groupMessage", ({ groupFrom, from, message }) => {
+        const groupName = document.getElementById("groups").value;
+        // *If the sender of the message is the current user, do not press the screen
+        if (from === socket.userId) return;
+        if (!msgData.groups[groupName]) msgData.groups[groupName] = [];
+        msgData.groups[groupName].push([from, message]);
+
+        const messages = document.getElementById("messages");
+        if (groupName == groupFrom && sellectChat == "groups")
+          // * message added to screen
+          messages.innerHTML += `
+              <div class="flex w-full mt-2 space-x-3 max-w-xs">
+                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300"></div>
+                <div>
+                  <span class="text-xs leading-none">${from}</span>
+                  <div class="bg-gray-300 p-3 rounded-r-lg rounded-bl-lg">
+                    <p class="text-sm">
+                      ${message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            `;
+      });
+
+      // * Update active users
+      socket.on("activeUsers", (users) => {
+        const activeUsersSelect = document.getElementById("activeUsers");
+        activeUsersSelect.innerHTML =
+          '<option value="">--Active Users--</option>'; // * Clear old options
+
+        users.forEach((userId) => {
+          const option = document.createElement("option");
+          option.value = userId;
+          option.textContent = userId;
+          activeUsersSelect.appendChild(option);
+        });
+      });
+
+      // * Update groups
+      socket.on("activeGroups", (groups) => {
+        const groupsSelect = document.getElementById("groups");
+        groupsSelect.innerHTML = '<option value="">--Groups--</option>'; // * Clear old options
+
+        groups.forEach((groupName) => {
+          const option = document.createElement("option");
+          option.value = groupName;
+          option.textContent = groupName;
+          groupsSelect.appendChild(option);
+        });
+      });
+    </script>
+  </body>
+</html>

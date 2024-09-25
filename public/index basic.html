@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Özel ve Grup Sohbet</title>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <body>
+    <h1>Özel ve Grup Sohbet</h1>
+
+    <input type="text" id="userId" placeholder="Kullanıcı ID" />
+    <button onclick="register()">Giriş Yap</button>
+
+    <br /><br />
+
+    <select id="activeUsers">
+      <option value="">--Aktif Kullanıcılar--</option>
+    </select>
+
+    <br /><br />
+
+    <input type="text" id="groupName" placeholder="Yeni Grup Adı" />
+    <button onclick="createGroup()">Grup Oluştur</button>
+
+    <br /><br />
+
+    <select id="groups">
+      <option value="">--Gruplar--</option>
+    </select>
+
+    <button onclick="joinGroup()">Gruba Katıl</button>
+
+    <br /><br />
+
+    <h2>Özel Mesaj Gönder</h2>
+    <input type="text" id="privateMessage" placeholder="Özel Mesaj" />
+    <button onclick="sendPrivateMessage()">Özel Mesaj Gönder</button>
+
+    <br /><br />
+
+    <h2>Grup Mesajı Gönder</h2>
+    <input type="text" id="groupMessageInput" placeholder="Grup Mesajı" />
+    <button onclick="sendGroupMessage()">Grup Mesajı Gönder</button>
+
+    <br /><br />
+
+    <ul id="messages"></ul>
+
+    <script>
+      const socket = io();
+
+      // Kullanıcıyı kaydet
+      function register() {
+        const userId = document.getElementById("userId").value;
+        socket.emit("register", userId);
+      }
+
+      // Yeni grup oluştur
+      function createGroup() {
+        const groupName = document.getElementById("groupName").value;
+        if (groupName) {
+          socket.emit("createGroup", groupName);
+        }
+      }
+
+      // Gruba katıl
+      function joinGroup() {
+        const groupName = document.getElementById("groups").value;
+        if (groupName) {
+          socket.emit("joinGroup", groupName);
+        }
+      }
+
+      // Özel mesaj gönder
+      function sendPrivateMessage() {
+        const toUserId = document.getElementById("activeUsers").value;
+        const message = document.getElementById("privateMessage").value;
+        if (toUserId && message) {
+          // Kendi mesajını ekrana yaz
+          const messages = document.getElementById("messages");
+          const li = document.createElement("li");
+          li.textContent = `To ${toUserId}: ${message}`;
+          messages.appendChild(li);
+          // Mesajı sunucuya gönder
+          socket.emit("privateMessage", { to: toUserId, message });
+          document.getElementById("privateMessage").value = ""; // Mesaj kutusunu temizle
+        }
+      }
+
+      // Grup mesajı gönder
+      function sendGroupMessage() {
+        const groupName = document.getElementById("groups").value;
+        const message = document.getElementById("groupMessageInput").value;
+        if (groupName && message) {
+          // Kendi mesajını ekrana yaz
+          const messages = document.getElementById("messages");
+          const li = document.createElement("li");
+          li.textContent = `To group ${groupName}: ${message}`;
+          messages.appendChild(li);
+          // Mesajı sunucuya gönder
+          socket.emit("groupMessage", { groupName, message });
+          document.getElementById("groupMessageInput").value = ""; // Mesaj kutusunu temizle
+        }
+      }
+
+      // Başka bir kullanıcıdan gelen özel mesajı göster
+      socket.on("privateMessage", ({ from, message }) => {
+        const messages = document.getElementById("messages");
+        const li = document.createElement("li");
+        li.textContent = `From ${from}: ${message}`;
+        messages.appendChild(li);
+      });
+
+      // Başka bir kullanıcıdan gelen grup mesajını göster (gönderen hariç)
+      socket.on("groupMessage", ({ from, message }) => {
+        // Eğer mesaj gönderen kişi şu anki kullanıcıysa ekrana basma
+        if (from === socket.userId) return;
+
+        const messages = document.getElementById("messages");
+        const li = document.createElement("li");
+        li.textContent = `From ${from} in group: ${message}`;
+        messages.appendChild(li);
+      });
+
+      // Aktif kullanıcıları güncelle
+      socket.on("activeUsers", (users) => {
+        const activeUsersSelect = document.getElementById("activeUsers");
+        activeUsersSelect.innerHTML =
+          '<option value="">--Aktif Kullanıcılar--</option>'; // Eski seçenekleri temizle
+
+        users.forEach((userId) => {
+          const option = document.createElement("option");
+          option.value = userId;
+          option.textContent = userId;
+          activeUsersSelect.appendChild(option);
+        });
+      });
+
+      // Grupları güncelle
+      socket.on("activeGroups", (groups) => {
+        const groupsSelect = document.getElementById("groups");
+        groupsSelect.innerHTML = '<option value="">--Gruplar--</option>'; // Eski seçenekleri temizle
+
+        groups.forEach((groupName) => {
+          const option = document.createElement("option");
+          option.value = groupName;
+          option.textContent = groupName;
+          groupsSelect.appendChild(option);
+        });
+      });
+    </script>
+  </body>
+</html>
